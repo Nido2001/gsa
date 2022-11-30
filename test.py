@@ -132,6 +132,9 @@ def GSALogin(username, password):
         },
     )
 
+    if plist_response["Status"]["hsc"] == 409:
+        return plist_response["Status"]["em"].encode('utf-8')
+
     srpclient.p = CalculateX(password, plist_response["s"], plist_response["i"])
     M1 = srpclient.process_challenge(plist_response["s"], plist_response["B"])
 
