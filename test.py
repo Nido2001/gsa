@@ -5,6 +5,7 @@ import json
 import hashlib
 import hmac
 import requests
+import os
 import srp._pysrp as srp
 import pbkdf2
 from http.server import BaseHTTPRequestHandler, HTTPServer
