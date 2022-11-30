@@ -19,21 +19,22 @@ def postXMLData(parameters, locale, timezone, proxy_protocol, proxy_address) -> 
     r = requests.get("https://sign.rheaa.xyz/", verify=False, timeout=5)
     r = json.loads(r.text)
     cpd = {
+        "AppleIDClientIdentifier": "6DC291E9-B3E4-47D8-ABA9-B744C50A768A",
         "X-Apple-I-Client-Time": r["X-Apple-I-Client-Time"],
-        "X-Apple-I-TimeZone": timezone,
-        "loc": locale,
-        "X-Apple-Locale": locale,
         "X-Apple-I-MD": r["X-Apple-I-MD"],
-        "X-Apple-I-MD-LU": r["X-Apple-I-MD-LU"],
-        "X-Apple-I-MD-M": r["X-Apple-I-MD-M"],
-        "X-Apple-I-MD-RINFO": r["X-Apple-I-MD-RINFO"],
-        "X-Mme-Device-Id": r["X-Mme-Device-Id"],
-        "X-Apple-I-SRL-NO": r["X-Apple-I-SRL-NO"],
-        "bootstrap": True,
-        "icscrec": True,
-        "pbe": False,
-        "prkgen": True,
-        "svct": "iCloud",
+        "X-Apple-I-MD-M": r["X-Apple-I-MD-M"],      
+        "X-Apple-I-MD-RINFO": "17106176",        
+        "X-Apple-I-SRL-NO": "C76SHD7GHG6W",        
+        "X-Mme-Device-Id": "fc0ccb8795d7d04bf9f67b4d277eef96fe4653e6",        
+        "bootstrap": True,        
+        "capp": "itunesstored",        
+        "ckgen": True,        
+        "dc": "2",
+        "dec": "2",        
+        "loc": locale,
+        "pbe": True,        
+        "ptkn": "",        
+        "svct": "iTunes",
     }
 
     body = {
@@ -49,8 +50,8 @@ def postXMLData(parameters, locale, timezone, proxy_protocol, proxy_address) -> 
     headers = {
         "Content-Type": "text/x-xml-plist",
         "Accept": "*/*",
-        "User-Agent": "akd/1.0 CFNetwork/978.0.7 Darwin/18.7.0",
-        "X-MMe-Client-Info": "<MacBookPro15,1> <Mac OS X;10.15.2;19C57> <com.apple.AuthKit/1 (com.apple.dt.Xcode/3594.4.19)>",
+        "User-Agent": "akd/1.0 CFNetwork/1206 Darwin/20.1.0",
+        "X-MMe-Client-Info": "<iPhone9,1> <iPhone OS;14.2;18B92> <com.apple.akd/1.0 (com.apple.akd/1.0)>",
     }
     proxy_servers = {
         proxy_protocol: proxy_address,
@@ -111,6 +112,7 @@ def GSALogin(username, password, locale, timezone, proxy_protocol, proxy_address
 
     if plist_response["Status"]["em"] == "Your account information was entered incorrectly.":
         return "Your account information was entered incorrectly.".encode('utf-8')
+    
     srpclient.p = CalculateX(password, plist_response["s"], plist_response["i"])
     M1 = srpclient.process_challenge(plist_response["s"], plist_response["B"])
 
@@ -126,10 +128,16 @@ def GSALogin(username, password, locale, timezone, proxy_protocol, proxy_address
         proxy_protocol,
         proxy_address,
     )
+    
+    if plist_response["Status"]["em"] == "nable to sign you in to your Apple ID. Try again later.":
+        return "nable to sign you in to your Apple ID. Try again later.".encode('utf-8')
+    
     srpclient.verify_session(plist_response["M2"])
     newdata = Step4(srpclient, plist_response["spd"]).decode("utf-8")
     new = plist.dumps(plist_response).decode("utf-8")
     x = re.sub(r"\bspd<\/key>\s+\K<data>((.|\n)*)<\/data>", newdata, new)
+    # b = plist.loads(x)
+    # c = plist.dumps(b)
     return x.encode('utf-8')
 
 
