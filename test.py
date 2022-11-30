@@ -5,12 +5,17 @@ import json
 import hashlib
 import hmac
 import requests
+import base64
+import regex as re
 import os
 import srp._pysrp as srp
 import pbkdf2
 from http.server import BaseHTTPRequestHandler, HTTPServer
+from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
+from cryptography.hazmat.primitives import padding
 
-
+import urllib3
+urllib3.disable_warnings()
 def generate_cpd() -> dict:
     cpd = {
         "bootstrap": True,
@@ -89,12 +94,28 @@ def postXMLData2(parameters) -> dict:
         verify=False,
         timeout=5,
     )
-    return resp.content
+    return plist.loads(resp.content)["Response"]
 
 def CalculateX(password: str, salt: bytes, iterations: int) -> bytes:
     p = hashlib.sha256(password.encode("utf-8")).digest()
     return pbkdf2.PBKDF2(p, salt, iterations, hashlib.sha256).read(32)
 
+
+def create_session_key(usr: srp.User, name: str) -> bytes:
+    k = usr.get_session_key()
+    if k is None:
+        raise Exception("No session key")
+    return hmac.new(k, name.encode(), hashlib.sha256).digest()
+
+def Step4(usr: srp.User, data: bytes) -> bytes:
+    extra_data_key = create_session_key(usr, "extra data key:")
+    extra_data_iv = create_session_key(usr, "extra data iv:")
+    extra_data_iv = extra_data_iv[:16]
+    cipher = Cipher(algorithms.AES(extra_data_key), modes.CBC(extra_data_iv))
+    decryptor = cipher.decryptor()
+    data = decryptor.update(data) + decryptor.finalize()
+    padder = padding.PKCS7(128).unpadder()
+    return padder.update(data) + padder.finalize()
 
 def GSALogin(username, password):
     srp.rfc5054_enable()
@@ -122,7 +143,11 @@ def GSALogin(username, password):
             "o": "complete",
         },
     )
-    return plist_response
+    srpclient.verify_session(plist_response["M2"])
+    newdata = Step4(srpclient, plist_response["spd"]).decode("utf-8")
+    new = plist.dumps(plist_response).decode("utf-8")
+    x = re.sub(r"\bspd<\/key>\s+\K<data>((.|\n)*)<\/data>", newdata, new)
+    return x.encode('utf-8')#  + "\n DATA1 : " + str(extra_data_key) + "\n DATA2 : " + str(extra_data_iv)
 
 def main(username, password):
     return GSALogin(username, password)
