@@ -109,6 +109,8 @@ def GSALogin(username, password, locale, timezone, proxy_protocol, proxy_address
     if plist_response["Status"]["hsc"] == 409:
         return plist_response["Status"]["em"].encode('utf-8')
 
+    if plist_response["Status"]["em"] == "Your account information was entered incorrectly.":
+        return "Your account information was entered incorrectly.".encode('utf-8')
     srpclient.p = CalculateX(password, plist_response["s"], plist_response["i"])
     M1 = srpclient.process_challenge(plist_response["s"], plist_response["B"])
 
