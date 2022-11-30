@@ -138,7 +138,8 @@ class S(BaseHTTPRequestHandler):
         self._set_response()
         self.wfile.write(res)
 
-def run(server_class=HTTPServer, handler_class=S, port=8080):
+port = int(os.environ.get("PORT", 17995))
+def run(server_class=HTTPServer, handler_class=S, port=port):
     server_address = ('', port)
     httpd = server_class(server_address, handler_class)
     print('Server Starting...\n')
